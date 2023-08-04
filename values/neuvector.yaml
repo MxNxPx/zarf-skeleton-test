@@ -1,0 +1,16 @@
+neuvector:
+  enabled: true
+  ingress:
+    gateway: "admin"
+  values:
+    containerd:
+      enabled: true
+      path: "###ZARF_VAR_CONTAINER_RUNTIME_SOCKET###"
+    controller:
+      secret:
+        data:
+          sysinitcfg.yaml:
+            always_reload: true
+            scan_config:
+              auto_scan: true
+            no_telemetry_report: true
