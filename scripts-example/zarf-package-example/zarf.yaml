@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/defenseunicorns/zarf/main/zarf.schema.json
+kind: ZarfPackageConfig
+metadata:
+  name: scripts-package-example
+  description: "Zarf Scripts Pacakage Example"
+  version: "0.1.0"
+  architecture: amd64
+
+components:
+  - name: prepare-scripts
+    required: true
+    actions:
+      onCreate:
+        before:
+          - cmd: pwd &&  echo '3' > test3.txt
+            dir: ../scripts
+        after:
+          - cmd: rm test3.txt
+            dir: ../scripts
+    files:
+      - source: ../scripts/
+        target: run/scripts/
+  - name: execute-scripts
+    required: true
+    actions:
+      onDeploy:
+        before:
+          - cmd: pwd && bash ./test.sh
+            dir: run/scripts/
+        after:
+          - cmd: rm -r run
