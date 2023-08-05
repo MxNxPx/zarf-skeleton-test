@@ -470,3 +470,55 @@ components:  definition of capabilities this package deploys
           main.main()
           	/home/runner/work/zarf/zarf/main.go:23 +0x6f
 ```
+
+check contents in zarf cache
+
+```console
+# ls -lRta ../../../../../.zarf-cache/oci/ghcr.io/mxnxpx/packages/scripts-package-example:0.1.0-skeleton/
+'../../../../../.zarf-cache/oci/ghcr.io/mxnxpx/packages/scripts-package-example:0.1.0-skeleton/':
+total 20
+-rw-rw-r-- 1 palassis palassis   96 Aug  5 14:02 checksums.txt
+-rw-rw-r-- 1 palassis palassis  943 Aug  5 14:02 zarf.yaml
+drwxrwxr-x 4 palassis palassis 4096 Aug  5 14:02 components
+drwxr-xr-x 3 palassis palassis 4096 Aug  5 12:53 .
+drwxr-xr-x 5 palassis palassis 4096 Aug  5 12:53 ..
+
+'../../../../../.zarf-cache/oci/ghcr.io/mxnxpx/packages/scripts-package-example:0.1.0-skeleton/components':
+total 24
+drwxrwxr-x 4 palassis palassis 4096 Aug  5 14:02 .
+drwx------ 3 palassis palassis 4096 Aug  5 14:02 prepare-scripts
+-rw-rw-r-- 1 palassis palassis 6144 Aug  5 14:02 prepare-scripts.tar
+drwx------ 2 palassis palassis 4096 Aug  5 12:53 execute-scripts
+drwxr-xr-x 3 palassis palassis 4096 Aug  5 12:53 ..
+
+'../../../../../.zarf-cache/oci/ghcr.io/mxnxpx/packages/scripts-package-example:0.1.0-skeleton/components/prepare-scripts':
+total 12
+drwx------ 3 palassis palassis 4096 Aug  5 14:02 .
+drwxrwxr-x 4 palassis palassis 4096 Aug  5 14:02 ..
+drwx------ 3 palassis palassis 4096 Aug  5 14:02 files
+
+'../../../../../.zarf-cache/oci/ghcr.io/mxnxpx/packages/scripts-package-example:0.1.0-skeleton/components/prepare-scripts/files':
+total 12
+drwx------ 3 palassis palassis 4096 Aug  5 14:02 .
+drwx------ 3 palassis palassis 4096 Aug  5 14:02 ..
+drwx------ 3 palassis palassis 4096 Aug  5 14:02 0
+
+'../../../../../.zarf-cache/oci/ghcr.io/mxnxpx/packages/scripts-package-example:0.1.0-skeleton/components/prepare-scripts/files/0':
+total 12
+drwx------ 3 palassis palassis 4096 Aug  5 14:02 .
+drwx------ 3 palassis palassis 4096 Aug  5 14:02 ..
+drwx------ 2 palassis palassis 4096 Aug  5 14:02 scripts
+
+'../../../../../.zarf-cache/oci/ghcr.io/mxnxpx/packages/scripts-package-example:0.1.0-skeleton/components/prepare-scripts/files/0/scripts':
+total 20
+drwx------ 2 palassis palassis 4096 Aug  5 14:02 .
+drwx------ 3 palassis palassis 4096 Aug  5 14:02 ..
+-rw-rw-r-- 1 palassis palassis    2 Aug  5 14:02 test1.txt
+-rw-rw-r-- 1 palassis palassis    2 Aug  5 14:02 test2.txt
+-rw-rw-r-- 1 palassis palassis  157 Aug  5 14:02 test.sh
+
+'../../../../../.zarf-cache/oci/ghcr.io/mxnxpx/packages/scripts-package-example:0.1.0-skeleton/components/execute-scripts':
+total 8
+drwxrwxr-x 4 palassis palassis 4096 Aug  5 14:02 ..
+drwx------ 2 palassis palassis 4096 Aug  5 12:53 .
+```
