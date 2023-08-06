@@ -1,0 +1,16 @@
+**/*.tfstate
+**/.terraform
+**/.terraform.lock.hcl
+**/*.tfstate.backup
+**/*.out
+*.tar.gz
+**/*.tar.zst
+~/
+.DS_Store
+defense-unicorns-distro/preflight.sh
+.terraform
+tmp
+zarf-sbom
+.idea
+**/checksums.txt
+**/*.log

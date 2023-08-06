@@ -1,0 +1,342 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/defenseunicorns/zarf/main/zarf.schema.json
+kind: ZarfPackageConfig
+metadata:
+  name: dubbd-aws-test
+  description: "Defense Unicorns Big Bang Distro"
+  version: "0.1.0"
+  architecture: amd64
+
+variables:
+
+  - name: EPHEMERAL
+    description: "Set whether the cluster should be considered ephemeral - if true all resources will be force destroyed on removal"
+#    default: "false"
+    default: "true"
+  - name: LOKI_FORCE_DESTROY
+    description: "If set to true, delete the S3 bucket and corresponding KMS key associated with the Loki bucket. Overrides ephemeral setting."
+  - name: VELERO_FORCE_DESTROY
+    description: "If set to true, delete the S3 bucket and corresponding KMS key associated with the Velero bucket. Overrides ephemeral setting."
+  - name: PVC_RECLAIM_POLICY
+    description: "Affects DUBBD's default storage class reclaimPolicy, either `Retain` or `Delete`. No effect if EBS CSI Driver is not installed. Overrides ephemeral setting."
+
+components:
+  - name: set-ephemeral
+    required: true
+    actions:
+      onDeploy:
+        before:
+          - cmd: |
+              if [ -z "${ZARF_VAR_LOKI_FORCE_DESTROY}" ]; then
+                echo "${ZARF_VAR_EPHEMERAL}"
+              else
+                echo "${ZARF_VAR_LOKI_FORCE_DESTROY}"
+              fi
+            mute: true
+            setVariables:
+              - name: LOKI_FORCE_DESTROY
+          - cmd: |
+              if [ -z "${ZARF_VAR_VELERO_FORCE_DESTROY}" ]; then
+                echo "${ZARF_VAR_EPHEMERAL}"
+              else
+                echo "${ZARF_VAR_VELERO_FORCE_DESTROY}"
+              fi
+            mute: true
+            setVariables:
+              - name: VELERO_FORCE_DESTROY
+  - name: terraform-loki
+    required: true
+    actions:
+      onCreate:
+        before:
+          - cmd: pwd && cd $(dirname $(find . -type f -name 'terraform-loki.txt')) && terraform get -update
+            dir: ../terraform-loki
+    files:
+      - source: ../terraform-loki/
+        target: ../terraform-loki/run
+  - name: execute-terraform-loki
+    required: true
+    actions:
+      onDeploy:
+        before:
+#          - cmd: echo ${ZARF_VAR_STATE_KEY} | sed 's/\.tfstate/-loki.tfstate/g'
+#            dir: ../loki/run
+#            setVariables:
+#              - name: STATE_KEY_LOKI
+          - cmd: "test -d ./run/ && chmod -R ugo+rwx ./run/ || echo $?"
+            dir: ../terraform-loki
+          - cmd: pwd && cd $(dirname $(find . -type f -name 'terraform-loki.txt')) && terraform init
+            dir: ../terraform-loki/run
+          - cmd: pwd && cd $(dirname $(find . -type f -name 'terraform-loki.txt')) && terraform plan -lock=false -out=./tf-plan.out
+            dir: ../terraform-loki/run
+#          - cmd: sleep 15 #time to review
+#          - cmd: terraform apply -auto-approve
+#            dir: ../loki/run
+      onRemove:
+        before:
+          - cmd: |
+              if [ -d "../terraform-loki/run" ]; then
+                cd ../terraform-loki/run
+                if [ "$(terraform output force_destroy)" = true ]; then
+                  terraform destroy -auto-approve
+                else
+                  echo "Skipping remove, force_destroy is set to false"
+                fi
+              else
+                echo "Cannot remove: terraform-loki/run directory does not exist"
+              fi
+#  - name: terraform-loki-outputs
+#    required: true
+#    actions:
+#      onDeploy:
+#        after:
+#          - cmd: terraform output -raw s3_bucket
+#            dir: ../terraform-loki/run
+#            setVariables:
+#              - name: LOKI_S3_BUCKET
+#          - cmd: terraform output -raw aws_region
+#            dir: ../loki/run
+#            setVariables:
+#              - name: LOKI_S3_AWS_REGION
+#          - cmd: terraform output -raw irsa_role_arn
+#            dir: ../loki/run
+#            setVariables:
+#              - name: LOKI_S3_ROLE_ARN
+#  - name: velero-module
+#    required: true
+#    actions:
+#      onCreate:
+#        before:
+#          - cmd: terraform get -update
+#            dir: ../velero
+#    files:
+#      - source: ../velero/.terraform
+#        target: run/velero/.terraform
+#      - source: ../velero/main.tf
+#        target: run/velero/main.tf
+#      - source: ../velero/variables.tf
+#        target: run/velero/variables.tf
+#      - source: ../velero/output.tf
+#        target: run/velero/output.tf
+#      - source: ../velero/terraform.tfvars
+#        target: run/velero/terraform.tfvars
+#  - name: velero-execute-terraform
+#    required: true
+#    actions:
+#      onDeploy:
+#        before:
+#          - cmd: echo ${ZARF_VAR_STATE_KEY} | sed 's/\.tfstate/-velero.tfstate/g'
+#            dir: run/velero
+#            setVariables:
+#              - name: STATE_KEY_VELERO
+#          - cmd: "echo ${ZARF_VAR_STATE_KEY_VELERO}"
+#          - cmd: |
+#              ../terraform init -force-copy \
+#              -backend-config="bucket=${ZARF_VAR_STATE_BUCKET_NAME}" \
+#              -backend-config="key=${ZARF_VAR_STATE_KEY_VELERO}" \
+#              -backend-config="region=${ZARF_VAR_REGION}" \
+#              -backend-config="dynamodb_table=${ZARF_VAR_STATE_DYNAMODB_TABLE_NAME}"
+#            dir: run/velero
+#          - cmd: ../terraform plan
+#            dir: run/velero
+#          - cmd: sleep 15 #time to review
+#          - cmd: ../terraform apply -auto-approve
+#            dir: run/velero
+#      onRemove:
+#        before:
+#          - cmd: |
+#              if [ -d "run/velero" ]; then
+#                cd run/velero
+#                if [ "$(../terraform output force_destroy)" = true ]; then
+#                  ../terraform destroy -auto-approve
+#                else
+#                  echo "Skipping remove, force_destroy is set to false"
+#                fi
+#              else
+#                echo "Cannot remove: run/velero directory does not exist"
+#              fi
+#  - name: velero-outputs
+#    required: true
+#    actions:
+#      onDeploy:
+#        after:
+#          - cmd: ../terraform output -raw s3_bucket
+#            dir: run/velero
+#            setVariables:
+#              - name: VELERO_S3_BUCKET
+#          - cmd: ../terraform output -raw aws_region
+#            dir: run/velero
+#            setVariables:
+#              - name: VELERO_S3_AWS_REGION
+#          - cmd: ../terraform output -raw irsa_role_arn
+#            dir: run/velero
+#            setVariables:
+#              - name: VELERO_S3_ROLE_ARN
+#  - name: route53-policy-pre
+#    required: true
+#    actions:
+#      onDeploy:
+#        before:
+#          - cmd: echo "route53-policy"
+#            setVariables:
+#              - name: STATE_KEY_PREFIX
+#          - cmd: echo "${ZARF_VAR_STATE_KEY_PREFIX}-${ZARF_VAR_STATE_KEY}"
+#            setVariables:
+#              - name: ROUTE53_POLICY_STATE_KEY
+#  - name: route53-policy-module
+#    required: true
+#    actions:
+#      onCreate:
+#        before:
+#          - cmd: terraform get -update
+#            dir: ../route53-policy
+#    files:
+#      - source: ../route53-policy/.terraform
+#        target: run/route53-policy/.terraform
+#      - source: ../route53-policy/main.tf
+#        target: run/route53-policy/main.tf
+#      - source: ../route53-policy/variables.tf
+#        target: run/route53-policy/variables.tf
+#      - source: ../route53-policy/output.tf
+#        target: run/route53-policy/output.tf
+#      - source: ../route53-policy/terraform.tfvars
+#        target: run/route53-policy/terraform.tfvars
+#  - name: execute-route53-policy-terraform
+#    required: true
+#    actions:
+#      onDeploy:
+#        before:
+#          - cmd: "test -d ./route53-policy/ && chmod -R ugo+rwx ./route53-policy/ || echo $?"
+#            dir: run
+#          - cmd: |
+#              ../terraform init -force-copy \
+#              -backend-config="bucket=${ZARF_VAR_STATE_BUCKET_NAME}" \
+#              -backend-config="key=${ZARF_VAR_ROUTE53_POLICY_STATE_KEY}" \
+#              -backend-config="region=${ZARF_VAR_REGION}" \
+#              -backend-config="dynamodb_table=${ZARF_VAR_STATE_DYNAMODB_TABLE_NAME}"
+#            dir: run/route53-policy
+#          - cmd: ../terraform plan
+#            dir: run/route53-policy
+#          - cmd: sleep 15 #time to review
+#          - cmd: ../terraform apply -auto-approve
+#            dir: run/route53-policy
+#      onRemove:
+#        before:
+#          - cmd: |
+#              if [ -d "run/route53-policy" ]; then
+#                cd run/route53-policy
+#                ../terraform destroy -auto-approve
+#              else
+#                echo "Cannot remove: run/route53-policy directory does not exist"
+#              fi
+#  - name: route53-policy-outputs
+#    required: true
+#    actions:
+#      onDeploy:
+#        after:
+#          - cmd: ../terraform output -raw route53_role_arn
+#            dir: run/route53-policy
+#            setVariables:
+#              - name: ROUTE53_ROLE_ARN
+#  - name: load-certs
+#    required: true
+#    import:
+#      path: ../../defense-unicorns-distro
+#  - name: download-flux
+#    required: true
+#    import:
+#      path: ../../defense-unicorns-distro
+#  - name: storage-class
+#    required: true
+#    actions:
+#      onDeploy:
+#        after:
+#          - cmd: |
+#              if [ "${ZARF_VAR_IS_UPGRADE}" = "true" ] && ./zarf tools kubectl get statefulset -n tempo tempo-tempo >/dev/null 2>&1; then
+#                if ! [ "$(./zarf tools kubectl get statefulset -n tempo tempo-tempo -o jsonpath='{.spec.volumeClaimTemplates[0].spec.storageClassName}' 2>&1)" = "" ]; then
+#                  ./zarf tools kubectl get statefulset -n tempo tempo-tempo -o jsonpath='{.spec.volumeClaimTemplates[0].spec.storageClassName}' 2>&1
+#                fi
+#              else
+#                if ./zarf tools kubectl get csidrivers ebs.csi.aws.com >/dev/null 2>&1 ; then
+#                  ./zarf tools kubectl apply -f dubbd-storage-class.yaml >/dev/null 2>&1 && echo dubbd-default-sc
+#                else
+#                  ./zarf tools kubectl get storageclass --output=jsonpath='{range .items[?(@.metadata.annotations.storageclass\.kubernetes\.io/is-default-class=="true")]}{.metadata.name}{end}'
+#                fi
+#              fi
+#            mute: true
+#            description: "Determine storage class to use"
+#            setVariables:
+#              - name: STORAGE_CLASS_NAME
+#          - cmd: rm -rf dubbd-storage-class.yaml
+#            mute: true
+#    files:
+#      - source: ../k8s-manifests/dubbd-storage-class.yaml
+#        target: dubbd-storage-class.yaml
+#  - name: dubbd-pre-upgrade
+#    required: true
+#    import:
+#      path: ../../defense-unicorns-distro
+#  - name: bigbang
+#    required: true
+#    import:
+#      path: ../../defense-unicorns-distro
+#    extensions:
+#      bigbang:
+#        version: "###ZARF_PKG_TMPL_BIGBANG_VERSION###"
+#        valuesFiles:
+#          - ../values/aws-istio.yaml
+#          - ../values/aws-loki.yaml
+#          - ../values/aws-velero.yaml
+#          - ../values/aws-storage-class.yaml
+#    actions:
+#      onDeploy:
+#        before:
+#          - cmd: |
+#              ./zarf tools kubectl label ns -l app.kubernetes.io/part-of=dubbd-aws zarf.dev/agent-
+#            description: "Remove Zarf ignore namespace labels for DUBBD AWS"
+#          - cmd: |
+#              if [ "$(./zarf tools kubectl get svc -n istio-system admin-ingressgateway -o jsonpath='{.metadata.annotations.service\.beta\.kubernetes\.io/aws-load-balancer-internal}' 2>/dev/null)" = "${ZARF_VAR_PRIVATE_ADMIN_LB}" ]; then
+#                echo false
+#              else
+#                echo true
+#              fi
+#            description: "Check if admin ingressgateway needs an update"
+#            mute: true
+#            setVariables:
+#              - name: ADMIN_INGRESS_UPDATE
+#          - cmd: |
+#              if [ "$(./zarf tools kubectl get svc -n istio-system tenant-ingressgateway -o jsonpath='{.metadata.annotations.service\.beta\.kubernetes\.io/aws-load-balancer-internal}' 2>/dev/null)" = "${ZARF_VAR_PRIVATE_TENANT_LB}" ]; then
+#                echo false
+#              else
+#                echo true
+#              fi
+#            description: "Check if tenant ingressgateway needs an update"
+#            mute: true
+#            setVariables:
+#              - name: TENANT_INGRESS_UPDATE
+#  - name: external-dns-k8s-manifests
+#    required: true
+#    import:
+#      path: ../external-dns
+#  - name: external-dns-chart
+#    required: true
+#    import:
+#      path: ../external-dns
+#  - name: dubbd-post-upgrade
+#    required: true
+#    actions:
+#      onDeploy:
+#        after:
+#          - cmd: |
+#              if [ "${ZARF_VAR_IS_UPGRADE}" = "true" ]; then
+#                if [ "${ZARF_VAR_ADMIN_INGRESS_UPDATE}" = "true" ]; then
+#                  ./zarf tools kubectl delete svc -n istio-system admin-ingressgateway
+#                  echo "Admin ingress gateway configuration was updated. You may need to update DNS records to point to the newly provisioned loadbalancer."
+#                  echo "The new hostname can be pulled with: zarf tools kubectl get svc -n istio-system admin-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'"
+#                fi
+#                if [ "${ZARF_VAR_TENANT_INGRESS_UPDATE}" = "true" ]; then
+#                  ./zarf tools kubectl delete svc -n istio-system tenant-ingressgateway
+#                  echo "Tenant ingress gateway configuration was updated. You may need to update DNS records to point to the newly provisioned loadbalancer."
+#                  echo "The new hostname can be pulled with: zarf tools kubectl get svc -n istio-system tenant-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'"
+#                fi
+#              fi
+#            description: "DUBBD post-upgrade: Recreate Istio Ingress Gateway resources if their configuration changed"

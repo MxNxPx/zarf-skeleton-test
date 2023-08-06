@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/defenseunicorns/zarf/main/zarf.schema.json
+kind: ZarfPackageConfig
+metadata:
+  name: dubbd-skeleton-example
+  description: "DUBBD  Skeleton Example"
+  version: "0.1.0"
+  architecture: amd64
+
+components:
+- name: import-set-ephemeral
+  required: true
+  import:
+    name: set-ephemeral
+    url: oci://ghcr.io/mxnxpx/packages/dubbd-aws-test:0.1.0-skeleton
+
+- name: import-terraform-loki
+  required: true
+  import:
+    name: terraform-loki
+    url: oci://ghcr.io/mxnxpx/packages/dubbd-aws-test:0.1.0-skeleton
+
+- name: import-execute-terraform-loki
+  required: true
+  import:
+    name: execute-terraform-loki
+    url: oci://ghcr.io/mxnxpx/packages/dubbd-aws-test:0.1.0-skeleton
