@@ -48,8 +48,9 @@ components:
     actions:
       onCreate:
         before:
-          - cmd: pwd && cd $(dirname $(find . -type f -name 'terraform-loki.txt')) && terraform get -update
+          - cmd: cd $(find . -name 'terraform-loki.txt' -printf '%h\n' -quit) && terraform get -update
             dir: ../terraform-loki
+            description: "Running: terraform get -update"
     files:
       - source: ../terraform-loki/
         target: ../tmp-terraform-loki
@@ -63,10 +64,13 @@ components:
 #            setVariables:
 #              - name: STATE_KEY_LOKI
           - cmd: "test -d ../tmp-terraform-loki && chmod -R ugo+rwx ../tmp-terraform-loki/ || echo $?"
-          - cmd: pwd && cd $(dirname $(find . -type f -name 'terraform-loki.txt')) && terraform init
+            description: "Setting permissions"
+          - cmd: cd $(find . -name 'terraform-loki.txt' -printf '%h\n' -quit) && terraform init
             dir: ../tmp-terraform-loki
-          - cmd: pwd && cd $(dirname $(find . -type f -name 'terraform-loki.txt')) && terraform plan -lock=false -out=./tf-plan.out
+            description: "Running: terraform init"
+          - cmd: cd $(find . -name 'terraform-loki.txt' -printf '%h\n' -quit) && terraform plan -lock=false -out=./tf-plan.out
             dir: ../tmp-terraform-loki
+            description: "Running: terraform plan"
 #          - cmd: sleep 15 #time to review
 #          - cmd: terraform apply -auto-approve
 #            dir: ../loki
