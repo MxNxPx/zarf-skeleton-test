@@ -52,7 +52,7 @@ components:
             dir: ../terraform-loki
     files:
       - source: ../terraform-loki/
-        target: ../tmp-terraform-loki/run
+        target: ../tmp-terraform-loki
   - name: execute-terraform-loki
     required: true
     actions:
@@ -62,27 +62,26 @@ components:
 #            dir: ../loki/run
 #            setVariables:
 #              - name: STATE_KEY_LOKI
-          - cmd: "test -d ./run/ && chmod -R ugo+rwx ./run/ || echo $?"
-            dir: ../tmp-terraform-loki
+          - cmd: "test -d ../tmp-terraform-loki && chmod -R ugo+rwx ../tmp-terraform-loki/ || echo $?"
           - cmd: pwd && cd $(dirname $(find . -type f -name 'terraform-loki.txt')) && terraform init
-            dir: ../tmp-terraform-loki/run
+            dir: ../tmp-terraform-loki
           - cmd: pwd && cd $(dirname $(find . -type f -name 'terraform-loki.txt')) && terraform plan -lock=false -out=./tf-plan.out
-            dir: ../tmp-terraform-loki/run
+            dir: ../tmp-terraform-loki
 #          - cmd: sleep 15 #time to review
 #          - cmd: terraform apply -auto-approve
-#            dir: ../loki/run
+#            dir: ../loki
       onRemove:
         before:
           - cmd: |
-              if [ -d "../tmp-terraform-loki/run" ]; then
-                cd ../tmp-terraform-loki/run
+              if [ -d "../tmp-terraform-loki" ]; then
+                cd ../tmp-terraform-loki
                 if [ "$(terraform output force_destroy)" = true ]; then
                   terraform destroy -auto-approve
                 else
                   echo "Skipping remove, force_destroy is set to false"
                 fi
               else
-                echo "Cannot remove: tmp-terraform-loki/run directory does not exist"
+                echo "Cannot remove: ../tmp-terraform-loki directory does not exist"
               fi
 #  - name: terraform-loki-outputs
 #    required: true
